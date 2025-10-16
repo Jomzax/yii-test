@@ -2,16 +2,13 @@
 
 namespace app\controllers;
 
-use app\helpers\AlertHelper;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;
 use yii\filters\VerbFilter;
-use app\models\LoginForm;
 use app\models\ContactForm;
 use app\models\SignupForm;
-use MongoDB\Client;
 
 class SiteController extends Controller
 {
@@ -39,6 +36,13 @@ class SiteController extends Controller
                 ],
             ],
         ];
+    }
+
+    public function beforeAction($action)
+    {
+        // guest → main.php, login → auth.php
+        $this->layout = Yii::$app->user->isGuest ? 'main' : 'auth';
+        return parent::beforeAction($action);
     }
 
     /**
