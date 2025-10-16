@@ -1,0 +1,22 @@
+version: '2'
+services:
+  php:
+    build: ./php
+    container_name: trainee-app
+    restart: always
+    ports:
+      - "8080:80"
+      # - "443:443"
+    volumes:
+      - ./www:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/php.ini
+
+  mongo:
+    image: mongo:5.0.9
+    container_name: trainee-mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: P@ssw0rd
+    ports:
+      - "27011:27017"

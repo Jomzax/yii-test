@@ -1,0 +1,85 @@
+html[data-bs-theme="dark"] body {
+  --bs-body-color: #ffffff;
+}
+html[data-bs-theme="dark"] .submenu-item a {
+  color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .table,
+html[data-bs-theme="dark"] .dataTable-table {
+  --bs-table-striped-color: #ececec !important;
+}
+
+html[data-bs-theme="dark"] .breadcrumb {
+  --bs-breadcrumb-item-active-color: #d9d9d9 !important;
+}
+
+html[data-bs-theme="dark"] .pagination {
+  --bs-pagination-color: #f1f1f1 !important;
+}
+
+html[data-bs-theme="dark"] .table,
+html[data-bs-theme="dark"] .dataTable-table {
+  --bs-table-color: #f1f1f1;
+}
+
+html[data-bs-theme="dark"] .form-group label {
+  color: #f7f7f7 !important;
+}
+
+html[data-bs-theme="dark"] .jstree-default .jstree-clicked,
+html[data-bs-theme="dark"] .jstree-hovered {
+  background: #6c7c83;
+}
+
+html[data-bs-theme="dark"] .top-panel {
+    position: fixed;
+    top: 70px;
+    right: 0px;
+    z-index: 9999;
+}
+
+html[data-bs-theme="dark"] .fs3 {
+    font-size: 0.7rem;
+}
+
+html[data-bs-theme="dark"] .btn-info {
+    color: #fff;
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
+
+html[data-bs-theme="dark"] .select2-container--default .select2-selection--single {
+    height: calc(2.25rem + 2px) !important;
+    border: 1px solid #040620 !important;
+    border-radius: 0.375rem !important;
+    background-color: #040620 !important;
+    font-size: 0.875rem !important;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+}
+
+html[data-bs-theme="dark"] .select2-dropdown {
+    background-color: #232323;
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  background-color: #ababab4d !important;
+}
+
+.dropzone {
+    min-height: 150px;
+    border: 1px solid rgba(182, 182, 182, 0.8);
+    border-radius: 5px;
+    padding: 20px 20px;
+}
+
+html[data-bs-theme="dark"] .btn-dropzone-delete {
+    background-color: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 0px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px !important;
+}
