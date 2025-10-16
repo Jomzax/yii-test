@@ -1,5 +1,5 @@
-# ไม่อัปโหลดไฟล์ docker-compose
-.docker-compose.yml
+# ไม่ให้ git อัปโหลด docker-compose
+docker-compose.yml
 
-# ไม่อัปโหลดไฟล์ PHP ใด ๆ
+# ไม่ให้ git อัปโหลดไฟล์ PHP ทั้งหมดในทุกโฟลเดอร์
 *.php
