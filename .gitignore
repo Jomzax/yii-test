@@ -1,0 +1,5 @@
+# ไม่อัปโหลดไฟล์ docker-compose
+.docker-compose.yml
+
+# ไม่อัปโหลดไฟล์ PHP ใด ๆ
+*.php
