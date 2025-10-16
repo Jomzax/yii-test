@@ -2,4 +2,4 @@
 docker-compose.yml
 
 # ไม่ให้ git อัปโหลดไฟล์ PHP ทั้งหมดในทุกโฟลเดอร์
-*.php
+/php/
