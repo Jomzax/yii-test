@@ -8,17 +8,18 @@ use yii\web\IdentityInterface;
 
 class User extends ActiveRecord implements IdentityInterface
 {
+    public $password;
     public static function collectionName()
     {
-        return'user';
+        return 'user';
     }
 
-      public function attributes()
+    public function attributes()
     {
         return [
             '_id',
             'username',
-            'password',
+            'password_hash',
             'roles',
             'created_at',
             'updated_at',
@@ -31,7 +32,7 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return [
             [['username', 'password'], 'required', 'message' => 'กรุณากรอกข้อมูล {attribute}'],
-            [['username', 'password', 'password_haah', 'roles', 'created_at', 'updated_at', 'created_by', 'updated_by'], 'safe'],
+            [['username', 'password', 'password_hash', 'roles', 'created_at', 'updated_at', 'created_by', 'updated_by'], 'safe'],
         ];
     }
 
@@ -39,10 +40,10 @@ class User extends ActiveRecord implements IdentityInterface
     {
         // เอาเท่าที่ใช้จริงตอนนี้
         return [
-            '_id'=> 'ID',
-            'username'=> 'ชื่อผู้ใช่',
+            '_id' => 'ID',
+            'username' => 'ชื่อผู้ใช่',
             'password' => 'รหัสผ่าน',
-            'password_haah' => 'รหัสผ่าน haah',
+            'password_hash' => 'รหัสผ่าน hash',
             'roles' => 'บทบาท',
             'created_at' => 'สร้างเมื่อ',
             'updated_at' => 'แก้ไขเมื่อ',
@@ -60,7 +61,7 @@ class User extends ActiveRecord implements IdentityInterface
 
     public static function findIdentityByAccessToken($token, $type = null)
     {
-        return null; 
+        return null;
     }
 
     public static function findByUsername($username)
@@ -85,11 +86,20 @@ class User extends ActiveRecord implements IdentityInterface
 
     public function validatePassword($password)
     {
-        // ในฐานมี field 'password' เป็น hash
-        return Yii::$app->security->validatePassword($password, (string)$this->password);
+        // ใช้ hash จากฐานข้อมูล (password_hash)
+        $hash = (string)$this->password_hash;
+
+        // ป้องกันเคสไม่มี hash (เช่น user เก่า)
+        if (empty($hash)) {
+            return false;
+        }
+
+        // ตรวจสอบรหัสผ่านจริงกับ hash ในฐาน
+        return Yii::$app->security->validatePassword($password, $hash);
     }
 
-    
+
+
     public function beforeSave($insert)
     {
         if ($insert) {
@@ -100,8 +110,12 @@ class User extends ActiveRecord implements IdentityInterface
         $this->updated_at = date('Y-m-d H:i:s');
         $this->updated_by = (string)Yii::$app->user->id;
 
+        // ถ้าฟอร์มกรอกรหัสผ่านมา ให้สร้าง hash แล้วเขียนลง password_hash
+        if (!empty($this->password)) {
+            $this->password_hash = Yii::$app->security->generatePasswordHash($this->password);
+            $this->password = null; // เคลียร์ค่า plain
+        }
+
         return parent::beforeSave($insert);
     }
-
-    
 }

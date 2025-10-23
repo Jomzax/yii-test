@@ -56,9 +56,9 @@ class UserController extends Controller
      * @return string
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionView($id)
+    public function actionView($_id)
     {
-        $model = $this->findModel($id);
+        $model = $this->findModel($_id);
         return $this->render('view', ['model' => $model]);
     }
 
@@ -72,26 +72,21 @@ class UserController extends Controller
     public function actionCreate()
     {
         $model = new User();
-        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
 
-            $user = new \app\models\User();
-            $user->username = $model->username;
-            $user->password = Yii::$app->security->generatePasswordHash($model->password_haah);
+        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+            Yii::$app->session->setFlash('success', 'สมัครสมาชิกสำเร็จแล้ว!');
+            return $this->redirect(['index']);
+        }
 
-            if ($user->save(false)) {
-                Yii::$app->session->setFlash('success', 'สมัครสมาชิกสำเร็จแล้ว!');
-                return $this->redirect(['site/login']);
-            }
-
+        if ($model->hasErrors()) {
             Yii::$app->session->setFlash('error', 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
         }
 
-         return $this->render('create', [
+        return $this->render('create', [
             'model' => $model,
         ]);
     }
 
-    
 
     /**
      * Updates an existing User model.
@@ -100,19 +95,19 @@ class UserController extends Controller
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionUpdate($id)
+    public function actionUpdate($_id)
     {
-        $model = $this->findModel($id);
+        $model = $this->findModel($_id);
 
         if ($this->request->isPost && $model->load($this->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => (string) $model->id]);
+            return $this->redirect(['view', '_id' => (string) $model->_id]);
         }
 
         return $this->render('update', [
             'model' => $model,
         ]);
     }
-    
+
     /**
      * Deletes an existing User model.
      * If deletion is successful, the browser will be redirected to the 'index' page.
@@ -120,10 +115,10 @@ class UserController extends Controller
      * @return \yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    public function actionDelete($id)
+    public function actionDelete($_id)
     {
 
-        $this->findModel($id)->delete();
+        $this->findModel($_id)->delete();
 
         AlertHelper::alert('success', 'ลบข้อมูลสำเร็จ');
 
@@ -138,11 +133,11 @@ class UserController extends Controller
      * @return User the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel($id)
+    protected function findModel($_id)
     {
-     if (($model = User ::findOne(['_id' => $id])) !== null) {
-      return $model;
-    }
-    throw new NotFoundHttpException('ไม่พบบทบาทที่ต้องการ');
+        if (($model = User::findOne(['_id' => $_id])) !== null) {
+            return $model;
+        }
+        throw new NotFoundHttpException('ไม่พบบทบาทที่ต้องการ');
     }
 }

@@ -16,10 +16,10 @@ $fmt = Yii::$app->formatter;
 $fmt->timeZone = 'Asia/Bangkok';
 
 // ฟังก์ชันแปลงเวลา (รับได้ทั้ง string และ timestamp)
-$asDateTime = function($v) use ($fmt) {
-    if (!$v) return '—';
-    $ts = is_numeric($v) ? (int)$v : strtotime((string)$v);
-    return $ts ? $fmt->asDatetime($ts, 'php:Y-m-d H:i') : '—';
+$asDateTime = function ($v) use ($fmt) {
+  if (!$v) return '—';
+  $ts = is_numeric($v) ? (int)$v : strtotime((string)$v);
+  return $ts ? $fmt->asDatetime($ts, 'php:Y-m-d H:i') : '—';
 };
 ?>
 <div class="user-view container-fluid py-3">
@@ -30,9 +30,6 @@ $asDateTime = function($v) use ($fmt) {
       <h1 class="h4 mb-2"><?= Html::encode($this->title) ?></h1>
       <div class="d-flex align-items-center gap-2">
         <span class="badge bg-primary">บัญชีผู้ใช้</span>
-        <small class="text-muted">
-          รหัส: <code class="user-select-all"><?= Html::encode((string)$model->_id) ?></code>
-        </small>
       </div>
     </div>
   </div>
@@ -57,10 +54,12 @@ $asDateTime = function($v) use ($fmt) {
                 'value' => $model->username ?: '—',
               ],
               [
-                'attribute' => 'password',
                 'label' => 'รหัสผ่าน',
-                'value' => Html::encode($model->password),
                 'format' => 'raw',
+                'value' => '<span class="text-muted">ไม่เปิดเผย</span> '
+                  . Html::a('เปลี่ยนรหัสผ่าน', ['user/update', '_id' => (string)$model->_id], [
+                    'class' => 'btn btn-sm btn-outline-primary ms-2'
+                  ]),
               ],
               [
                 'attribute' => 'roles',

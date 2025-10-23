@@ -118,10 +118,10 @@ class SiteController extends Controller
         if ($model->load(Yii::$app->request->post()) && $model->validate()) {
 
             $user = new \app\models\User();
-            $user->username = $model->username;
-            $user->password = Yii::$app->security->generatePasswordHash($model->password);
+            $user->username = trim($model->username);
+            $user->password = $model->password;   // ❌ ไม่ต้อง hash ที่นี่
 
-            if ($user->save(false)) {
+            if ($user->save()) {                  // ✅ ปล่อยให้ beforeSave() แฮชให้
                 Yii::$app->session->setFlash('success', 'สมัครสมาชิกสำเร็จแล้ว!');
                 return $this->redirect(['site/login']);
             }
@@ -131,6 +131,7 @@ class SiteController extends Controller
 
         return $this->render('signup', ['model' => $model]);
     }
+
 
     /**
      * Logout action.
