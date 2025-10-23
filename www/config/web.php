@@ -48,10 +48,10 @@ $config = [
         ],
       ],
     ],
-    
+
     'mongodb' => [
       'class' => '\yii\mongodb\Connection',
-      'dsn' => 'mongodb://admin:P%40ssw0rd@trainee-mongo:27017/?authSource=admin',
+      'dsn' => 'mongodb://admin:P%40ssw0rd@10.243.91.72:27017/?authSource=admin',
       'defaultDatabaseName' => 'db',
     ],
 
@@ -66,15 +66,18 @@ $config = [
         'application/json' => 'yii\web\JsonParser',
       ]
     ],
+
     'urlManager' => [
       'class' => 'yii\web\UrlManager',
       'enablePrettyUrl' => true,
       'showScriptName' => false,
       'rules' => [
         '' => 'site/index',
-        '/login' => 'site/login',
-        '/logout' => 'site/logout',
+        'login' => 'site/login',
+        'logout' => 'site/logout',
         'signup' => 'site/signup',
+        'about' => 'site/about',
+        'contact' => 'site/contact',
         '/unit/create/<parentId>' => 'unit/create',
         'file/download/<filename>' => 'file/download',
         'file/download/<path:.+>/<filename>' => 'file/download',
@@ -89,13 +92,13 @@ $config = [
 ];
 
 if (YII_ENV_DEV) {
-  // configuration adjustments for 'dev' environment
-  $config['bootstrap'][] = 'debug';
-  $config['modules']['debug'] = [
-    'class' => 'yii\debug\Module',
-    // uncomment the following to add your IP if you are not connecting from localhost.
-    //'allowedIPs' => ['127.0.0.1', '::1'],
-  ];
+  // // configuration adjustments for 'dev' environment
+  // $config['bootstrap'][] = 'debug';
+  // $config['modules']['debug'] = [
+  //   'class' => 'yii\debug\Module',
+  //   // uncomment the following to add your IP if you are not connecting from localhost.
+  //   //'allowedIPs' => ['127.0.0.1', '::1'],
+  // ];
 
   $config['bootstrap'][] = 'gii';
   $config['modules']['gii'] = [

@@ -8,7 +8,9 @@ use yii\web\Controller;
 use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\models\ContactForm;
+use app\models\LoginForm;
 use app\models\SignupForm;
+use yii\helpers\Url;
 
 class SiteController extends Controller
 {
@@ -17,49 +19,57 @@ class SiteController extends Controller
      */
     public function behaviors()
     {
-        return [
-            'access' => [
-                'class' => AccessControl::class,
-                'only' => ['logout'],
-                'rules' => [
-                    [
-                        'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
+        return array_merge(
+            parent::behaviors(),
+            [
+                'access' => [
+                    'class' => AccessControl::class,
+                    'only' => ['logout'],
+                    'rules' => [
+                        [
+                            'actions' => ['logout'],
+                            'allow' => true,
+                            'roles' => ['@'],
+                        ],
                     ],
                 ],
-            ],
-            'verbs' => [
-                'class' => VerbFilter::class,
-                'actions' => [
-                    'logout' => ['post'],
+                'verbs' => [
+                    'class' => VerbFilter::class,
+                    'actions' => [
+                        // 'logout' => ['post'],
+                        'update-session' => ['post'],
+                    ],
                 ],
-            ],
-        ];
+            ]
+        );
     }
 
     public function beforeAction($action)
     {
-        // guest → main.php, login → auth.php
-        $this->layout = Yii::$app->user->isGuest ? 'main' : 'auth';
-        return parent::beforeAction($action);
+        $actionCheckSessionWithOutUpdate = ['dashboard', 'index'];
+
+        if (in_array($action->id, $actionCheckSessionWithOutUpdate)) {
+            return parent::beforeAction($action);
+        } else {
+            return true;
+        }
     }
 
     /**
      * {@inheritdoc}
      */
-    public function actions()
-    {
-        return [
-            'error' => [
-                'class' => 'yii\web\ErrorAction',
-            ],
-            'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-            ],
-        ];
-    }
+    // public function actions()
+    // {
+    //     return [
+    //         'error' => [
+    //             'class' => 'yii\web\ErrorAction',
+    //         ],
+    //         'captcha' => [
+    //             'class' => 'yii\captcha\CaptchaAction',
+    //             'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
+    //         ],
+    //     ];
+    // }
 
     /**
      * Displays homepage.
@@ -68,6 +78,9 @@ class SiteController extends Controller
      */
     public function actionIndex()
     {
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['site/login']);
+        }
         return $this->render('index');
     }
 
@@ -76,20 +89,26 @@ class SiteController extends Controller
      *
      * @return Response|string
      */
+
     public function actionLogin()
     {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
+        if (!\Yii::$app->user->isGuest) {
+            return $this->redirect(['site/index']);
         }
 
-        $model = new \app\models\LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
+        $this->layout = 'auth';
+
+        $model = new LoginForm();
+
+        if ($model->load(\Yii::$app->request->post()) && $model->login()) {
+            // ✅ ถ้าล็อกอินสำเร็จ ให้กลับหน้า Home ทันที
+            return $this->redirect(['site/index']);
         }
 
         $model->password = '';
         return $this->render('login', ['model' => $model]);
     }
+
 
 
     public function actionSignup()
@@ -104,7 +123,7 @@ class SiteController extends Controller
 
             if ($user->save(false)) {
                 Yii::$app->session->setFlash('success', 'สมัครสมาชิกสำเร็จแล้ว!');
-                return $this->redirect(['login']);
+                return $this->redirect(['site/login']);
             }
 
             Yii::$app->session->setFlash('error', 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
@@ -121,8 +140,8 @@ class SiteController extends Controller
     public function actionLogout()
     {
         Yii::$app->user->logout();
-
-        return $this->goHome();
+        Yii::$app->session->destroy(); // ถ้าต้องการล้าง session ทั้งหมด
+        return $this->redirect(['site/login']);
     }
 
     /**

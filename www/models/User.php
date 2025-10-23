@@ -13,10 +13,42 @@ class User extends ActiveRecord implements IdentityInterface
         return'user';
     }
 
-    public function attributes()
+      public function attributes()
+    {
+        return [
+            '_id',
+            'username',
+            'password',
+            'roles',
+            'created_at',
+            'updated_at',
+            'created_by',
+            'updated_by',
+        ];
+    }
+
+    public function rules()
+    {
+        return [
+            [['username', 'password'], 'required', 'message' => 'กรุณากรอกข้อมูล {attribute}'],
+            [['username', 'password', 'password_haah', 'roles', 'created_at', 'updated_at', 'created_by', 'updated_by'], 'safe'],
+        ];
+    }
+
+    public function attributeLabels()
     {
         // เอาเท่าที่ใช้จริงตอนนี้
-        return ['_id', 'username', 'password'];
+        return [
+            '_id'=> 'ID',
+            'username'=> 'ชื่อผู้ใช่',
+            'password' => 'รหัสผ่าน',
+            'password_haah' => 'รหัสผ่าน haah',
+            'roles' => 'บทบาท',
+            'created_at' => 'สร้างเมื่อ',
+            'updated_at' => 'แก้ไขเมื่อ',
+            'created_by' => 'สร้างโดย',
+            'updated_by' => 'แก้ไขโดย',
+        ];
     }
 
     /* ===== IdentityInterface ===== */
@@ -56,4 +88,20 @@ class User extends ActiveRecord implements IdentityInterface
         // ในฐานมี field 'password' เป็น hash
         return Yii::$app->security->validatePassword($password, (string)$this->password);
     }
+
+    
+    public function beforeSave($insert)
+    {
+        if ($insert) {
+            $this->created_at = date('Y-m-d H:i:s');
+            $this->created_by = (string)Yii::$app->user->id;
+        }
+
+        $this->updated_at = date('Y-m-d H:i:s');
+        $this->updated_by = (string)Yii::$app->user->id;
+
+        return parent::beforeSave($insert);
+    }
+
+    
 }

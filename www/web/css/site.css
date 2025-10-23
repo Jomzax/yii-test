@@ -255,6 +255,9 @@ a.desc:after {
   border-radius: 4px;
 }
 
+body {
+  background-color: #012c4b57 !important; /* เทาอ่อน */
+}
 @media screen and (max-width: 767px) {
   .text-header-system {
     font-size: 1rem !important;
