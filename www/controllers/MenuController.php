@@ -2,12 +2,14 @@
 
 namespace app\controllers;
 
+use Yii;
 use app\helpers\AlertHelper;
 use app\helpers\ErrorHelper;
 use app\models\Menu;
+use app\models\MenuPermissoin;
+use app\models\MenuRoles;
 use app\models\MenuSearch;
 use app\widgets\controller\BaseController;
-use Yii;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use app\models\Permissoin;
@@ -107,7 +109,7 @@ class MenuController extends BaseController
      * @return string|\yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
-    
+
     public function actionUpdate($_id)
     {
         $model  = $this->findModel($_id);
@@ -196,28 +198,75 @@ class MenuController extends BaseController
      * @return \yii\web\Response
      * @throws NotFoundHttpException if the model cannot be found
      */
+
     public function actionDelete($_id)
     {
-        $model = $this->findModel($_id);
-        $menuId = (string)$model->_id; // แปลง ObjectId เป็น string เพื่อใช้ลบใน permissoin
+        $model  = $this->findModel($_id);
+        $menuId = (string)$model->_id;
 
-        if ($model->delete()) {
-
-            // ✅ ลบสิทธิ์ทั้งหมดของเมนูนี้ด้วย
-            Permissoin::deleteAll(['menu_id' => $menuId]);
-
-            AlertHelper::alert('success', 'ลบข้อมูลสำเร็จ');
-        } else {
+        if (!$model->delete()) {
             $errValue = ErrorHelper::getErrorsValueArray($model->errors ?? []);
-            AlertHelper::alert('warning', [
-                'title' => 'ไม่สามารถลบข้อมูลได้',
-                'text' => $errValue[0] ?? "",
-            ]);
+            AlertHelper::alert('warning', ['title' => 'ไม่สามารถลบเมนูได้', 'text' => $errValue[0] ?? ""]);
+            return $this->redirect(['index']);
         }
 
+        // 1) ลบ permissoin (ถ้ามีคอลเลกชัน Permissoin แยก)
+        Permissoin::deleteAll(['menu_id' => $menuId]);
+
+        // 2) หา menu_roles ของเมนูนี้ (เอาเฉพาะ _id ไม่ดึงทั้งเอกสาร)
+        $menuRoleIds = MenuRoles::find()
+            ->where(['menu_id' => $menuId])
+            ->select(['_id'])
+            ->asArray()
+            ->column(); // ได้เป็น array ของ ObjectId/str
+
+        // 3) ลบ menu_permissoin ใต้ menu_roles เหล่านี้แบบ $in
+        if (!empty($menuRoleIds)) {
+            $menuRoleIdStr = array_map('strval', $menuRoleIds);
+            MenuPermissoin::deleteAll(['menuroles_id' => ['$in' => $menuRoleIdStr]]);
+        }
+
+        // 4) ลบ menu_roles ของเมนูนี้
+        MenuRoles::deleteAll(['menu_id' => $menuId]);
+
+        AlertHelper::alert('success', 'ลบเมนูและสิทธิ์ที่เกี่ยวข้องสำเร็จ');
         return $this->redirect(['index']);
     }
 
+    /**
+     * หลังจากบันทึก Menu แล้ว ให้ไปอัปเดตชื่อในลูก MenuRoles และ MenuPermissoin ด้วย
+     */
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        $menuId = (string)$this->menu_id;
+
+        // อัปเดตชื่อ (name) ให้ลูกทั้งหมดเสมอ
+        $mrIds = MenuRoles::find()
+            ->select(['_id'])
+            ->where(['menu_id' => $menuId])
+            ->asArray()->column();
+
+        if (!empty($mrIds)) {
+            $mrIds = array_map('strval', $mrIds);
+
+            // ถ้าเปลี่ยน abbr ให้เปลี่ยนที่ลูกด้วย
+            if (array_key_exists('abbr', $changedAttributes)) {
+                $oldAbbr = (string)$changedAttributes['abbr'];
+                MenuPermissoin::updateAll(
+                    ['abbr' => (string)$this->abbr, 'name' => (string)$this->name],
+                    ['menuroles_id' => ['$in' => $mrIds], 'abbr' => $oldAbbr]
+                );
+            } else {
+                // ไม่ได้เปลี่ยน abbr แต่อัปเดตชื่อ
+                MenuPermissoin::updateAll(
+                    ['name' => (string)$this->name],
+                    ['menuroles_id' => ['$in' => $mrIds], 'abbr' => (string)$this->abbr]
+                );
+            }
+        }
+    }
 
     /**
      * Finds the Menu model based on its primary key value.

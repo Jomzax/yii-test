@@ -57,7 +57,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     'headerOptions' => ['class' => 'text-nowrap text-center','style' => 'width: 120px;'],
                     'contentOptions' => ['class' => 'text-center'],
                     'urlCreator' => function ($action, $model, $key, $index, $column) {
-                    return [$action, 'id' => (string)$model->_id];
+                    return [$action, '_id' => (string)$model->_id];
                     }
                 ],
                 ],

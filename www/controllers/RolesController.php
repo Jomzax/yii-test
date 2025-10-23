@@ -55,9 +55,9 @@ class RolesController extends Controller
         return $this->render('create', compact('model'));
     }
 
-    public function actionUpdate($id)
+    public function actionUpdate($_id)
     {
-        $model  = $this->findModel($id);
+        $model  = $this->findModel($_id);
         $roleId = (string)$model->_id;
 
         // ---------- ค่า checked เริ่มต้นให้ฟอร์ม ----------
@@ -66,9 +66,35 @@ class RolesController extends Controller
         // เมนูที่ role นี้มีอยู่แล้ว -> map menu_id => menuroles_id
         $menuRoleRows    = \app\models\MenuRoles::find()->where(['role_id' => $roleId])->all();
         $menuCheckedById = [];
+
         foreach ($menuRoleRows as $r) {
             $menuCheckedById[(string)$r->menu_id] = (string)$r->_id;
         }
+
+        foreach ($menuCheckedById as $menuId => $mrId) {
+            $validAbbrs = \app\models\Permissoin::find()
+                ->select(['abbr'])
+                ->where(['menu_id' => (string)$menuId])
+                ->asArray()->column();
+
+            // ถ้าเมนูนั้นไม่มีสิทธิ์เหลือเลย ก็ลบลูกทั้งหมด
+            if (empty($validAbbrs)) {
+                \app\models\MenuPermissoin::deleteAll(['menuroles_id' => (string)$mrId]);
+                continue;
+            }
+
+            // ลบรายการค้างที่ abbr ไม่อยู่ในสิทธิ์จริงของเมนูนั้น
+            \app\models\MenuPermissoin::deleteAll([
+                'menuroles_id' => (string)$mrId,
+                'abbr'         => ['$nin' => array_values($validAbbrs)],
+            ]);
+        }
+
+        // จากนั้นค่อยโหลด $permCheckedAbbrs ตามเดิม
+        $permCheckedAbbrs = \app\models\MenuPermissoin::find()
+            ->select(['abbr'])
+            ->where(['menuroles_id' => ['$in' => array_values($menuCheckedById)]])
+            ->column();
 
         // สิทธิ์ (abbr) ที่มีอยู่แล้วภายใต้ menuroles_ids ของ role นี้
         $permCheckedAbbrs = [];
@@ -236,29 +262,36 @@ class RolesController extends Controller
 
 
 
-    // public function actionUpdate($id)
-    // {
-    //     $model = $this->findModel($id);
-    //     if ($model->load(Yii::$app->request->post()) && $model->save()) {
-    //         Yii::$app->session->setFlash('success', 'แก้ไขบทบาทสำเร็จ');
-    //         return $this->redirect(['view', 'id' => (string)$model->_id]);
-    //     }
-    //     return $this->render('update', compact('model'));
-    // }
-
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
-        Yii::$app->session->setFlash('success', 'ลบบทบาทแล้ว');
+        $role = $this->findModel($id);
+        $roleId = (string)$role->_id;
+
+        // หา menu_roles ของ role นี้ (ดึงเฉพาะ _id)
+        $menuRoleIds = MenuRoles::find()
+            ->where(['role_id' => $roleId])
+            ->select(['_id'])
+            ->asArray()
+            ->column();
+
+        if (!empty($menuRoleIds)) {
+            $menuRoleIdStr = array_map('strval', $menuRoleIds);
+            MenuPermissoin::deleteAll(['menuroles_id' => ['$in' => $menuRoleIdStr]]);
+            MenuRoles::deleteAll(['_id' => ['$in' => $menuRoleIds]]);
+        }
+
+        $role->delete();
+        Yii::$app->session->setFlash('success', 'ลบบทบาทแล้ว (รวมสิทธิ์ที่เกี่ยวข้อง)');
         return $this->redirect(['index']);
     }
+
 
     /**
      * หาโมเดลโดยรองรับทั้ง ObjectId 24 ตัว และ _id แบบสตริง
      */
-    protected function findModel($id)
+    protected function findModel($_id)
     {
-        if (($model = Roles::findOne(['_id' => $id])) !== null) {
+        if (($model = Roles::findOne(['_id' => $_id])) !== null) {
             return $model;
         }
         throw new NotFoundHttpException('ไม่พบบทบาทที่ต้องการ');
