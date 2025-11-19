@@ -9,6 +9,7 @@ class SignupForm extends Model
 {
     public $username;
     public $password;
+    public $roles;
 
     public function rules()
     {

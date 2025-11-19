@@ -43,6 +43,7 @@ class Roles extends \yii\mongodb\ActiveRecord
             '_id',
             'name',
             'type',
+            'role_id',  
             'created_at',
             'updated_at',
             'created_by',
@@ -58,7 +59,7 @@ class Roles extends \yii\mongodb\ActiveRecord
     {
         return [
             [['name', 'type'], 'required', 'message' => 'กรุณากรอกข้อมูล {attribute}'],
-            [['name', 'type', 'created_at', 'updated_at', 'created_by', 'updated_by'], 'safe'],
+            [['name', 'type', 'role_id','created_at', 'updated_at', 'created_by', 'updated_by'], 'safe'],
             ['type', 'in', 'range' => array_keys(RoleHelper::getLabels())],
         ];
     }
@@ -72,6 +73,7 @@ class Roles extends \yii\mongodb\ActiveRecord
             '_id' => 'ID',
             'name' => 'ขื่อบทบาท',
             'type' => 'ประเภทบทบาท',
+            'role_id' => 'Role ID',
             'created_at' => 'สร้างเมื่อ',
             'updated_at' => 'แก้ไขเมื่อ',
             'created_by' => 'สร้างโดย',
@@ -100,4 +102,20 @@ class Roles extends \yii\mongodb\ActiveRecord
 
         return array_merge($role->menu_allow ?? [],  []);
     }
+
+    public static function getRolesName($id)
+    {
+        $rolesName = self::findOne(['_id' => $id]);
+        return  $rolesName ? $rolesName->name : null;
+    }
+
+    public static function getRolesList(){
+        $roles = self::find()->all();
+        $roleList = [];
+        foreach ($roles as $role) {
+            $roleList[(string)$role->_id] = $role->name;
+        }
+        return $roleList;
+    }
+
 }

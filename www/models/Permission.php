@@ -5,20 +5,20 @@ namespace app\models;
 use Yii;
 
 /**
- * This is the model class for collection "menu_permissoin".
+ * This is the model class for collection "permission".
  *
  * @property \MongoDB\BSON\ObjectID|string $_id
  * @property mixed $name
  * @property mixed $abbr
  */
-class MenuPermissoin extends \yii\mongodb\ActiveRecord
+class permission extends \yii\mongodb\ActiveRecord
 {
     /**
      * {@inheritdoc}
      */
     public static function collectionName()
     {
-        return 'menu_permissoin';
+        return 'permission';
     }
 
     /**
@@ -28,9 +28,10 @@ class MenuPermissoin extends \yii\mongodb\ActiveRecord
     {
         return [
             '_id',
-            'menuroles_id',
+            'menu_id',
             'name',
             'abbr',
+
         ];
     }
 
@@ -40,9 +41,7 @@ class MenuPermissoin extends \yii\mongodb\ActiveRecord
     public function rules()
     {
         return [
-            [['menuroles_id',
-            'name',
-            'abbr'], 'safe']
+            [['name', 'menu_id', 'value', 'abbr',], 'safe']
         ];
     }
 
@@ -53,7 +52,7 @@ class MenuPermissoin extends \yii\mongodb\ActiveRecord
     {
         return [
             '_id' => 'ID',
-            'menuroles_id' => 'Menu Roles ID',
+            'menu_id' => 'Menu ID',
             'name' => 'Name',
             'abbr' => 'Abbr',
         ];

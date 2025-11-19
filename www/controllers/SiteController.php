@@ -109,8 +109,6 @@ class SiteController extends Controller
         return $this->render('login', ['model' => $model]);
     }
 
-
-
     public function actionSignup()
     {
         $model = new SignupForm();
@@ -119,9 +117,19 @@ class SiteController extends Controller
 
             $user = new \app\models\User();
             $user->username = trim($model->username);
-            $user->password = $model->password;   // ❌ ไม่ต้อง hash ที่นี่
+            $user->password = $model->password; // ❌ ไม่ต้อง hash ที่นี่ ให้ beforeSave() จัดการ
 
-            if ($user->save()) {                  // ✅ ปล่อยให้ beforeSave() แฮชให้
+            // ✅ ค้นหา role เริ่มต้นที่ type = 'user'
+            $role = \app\models\Roles::findOne(['type' => 'user']);
+            if ($role) {
+                $user->roles = (string)$role->_id; // เก็บเป็น _id ของ role
+            } else {
+                Yii::$app->session->setFlash('error', 'ไม่พบ role เริ่มต้น (user)');
+                return $this->redirect(['site/signup']);
+            }
+
+            // ✅ บันทึกข้อมูล
+            if ($user->save()) {
                 Yii::$app->session->setFlash('success', 'สมัครสมาชิกสำเร็จแล้ว!');
                 return $this->redirect(['site/login']);
             }
@@ -131,6 +139,7 @@ class SiteController extends Controller
 
         return $this->render('signup', ['model' => $model]);
     }
+
 
 
     /**

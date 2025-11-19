@@ -3,6 +3,7 @@
 use app\components\MyGridView;
 use app\helpers\AccessControlHelper;
 use app\helpers\DateHelper;
+use app\helpers\PermissionControlHelper;
 use app\models\Menu;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -79,6 +80,9 @@ $this->params['breadcrumbs'][] = $this->title;
                             'template' => '<div class="btn-group flex-nowrap">{view} {update} {delete}</div>',
                             'buttons' => [
                                 'view' => function ($url, $model) {
+                                    if (!PermissionControlHelper::canAccessPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_VIEW)) {
+                                        return '';
+                                    }
                                     return Html::a(
                                         '<span class="glyphicon glyphicon-search"></span> <span class="d-none d-lg-inline ms-1">ดู</span>',
                                         $url,
@@ -91,6 +95,9 @@ $this->params['breadcrumbs'][] = $this->title;
                                     );
                                 },
                                 'update' => function ($url, $model) {
+                                    if (!PermissionControlHelper::canAccessPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_UPDATE)) {
+                                        return '';
+                                    }
                                     return Html::a(
                                         '<span class="glyphicon glyphicon-pencil"></span> <span class="d-none d-lg-inline ms-1">แก้ไข</span>',
                                         $url,
@@ -103,6 +110,9 @@ $this->params['breadcrumbs'][] = $this->title;
                                     );
                                 },
                                 'delete' => function ($url, $model) {
+                                    if (!PermissionControlHelper::canAccessPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_DELETE)) {
+                                        return '';
+                                    }
                                     return Html::a(
                                         '<span class="glyphicon glyphicon-trash"></span><span class="d-none d-lg-inline ms-1">ลบ</span>',
                                         $url,

@@ -4,13 +4,14 @@ use yii\helpers\Html;
 use yii\bootstrap5\ActiveForm;
 use app\models\User;
 use app\helpers\RoleHelper;
+use app\models\Roles;
 
 /** @var yii\web\View $this */
 /** @var app\models\User $model */
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
-<div class="user-form widget">
+<div class="user-form card shadow-sm p-4">
 
     <?php $form = ActiveForm::begin([
         'options' => ['autocomplete' => 'off'],
@@ -25,13 +26,13 @@ use app\helpers\RoleHelper;
         </div>
 
         <div class="col-md-6">
-            <?= $form->field($model, 'roles')->dropDownList(RoleHelper::getLabels(), [
+            <?= $form->field($model, 'roles')->dropDownList(Roles::getRolesList(), [
                 'prompt' => 'เลือกประเภท',
                 'class' => 'form-select form-control',
                 'style' => 'width: 100%;'
             ]) ?>
         </div>
-
+        
     </div>
 
     <div class="mt-3 text-center">

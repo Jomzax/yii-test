@@ -20,33 +20,38 @@ $this->params['breadcrumbs'][] = $this->title;
         <?= Html::a('สร้างผู้ใช้', ['create'], ['class' => 'btn btn-success']) ?>
     </div>
 
-    <?php // echo $this->render('_search', ['model' => $searchModel]); ?>
+    <?= $this->render('_search', ['model' => $searchModel]) ?>
+
+    <div class="card">
+        <div class="card-header bg-light py-3">
+            <h5 class="m-0"><i class="bi bi-search "></i> รายการผู้ใช้</h5>
+        </div>
         <div class="card-body  bg-light py-3">
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'columns' => [
-                [
-                    'class' => 'yii\grid\SerialColumn',
-                    'header' => 'ลำดับ',
-                    'headerOptions' => ['class' => 'text-center', 'style' => 'width: 50px;'],
-                    'contentOptions' => ['class' => 'text-center'],
-                
-                ],
-            [
-                'attribute' => 'username',
-                'headerOptions' => ['class' => 'text-center'],
-                'contentOptions' => ['class' => 'text-center'],
-            ],
-            [
-                    'class' => 'yii\grid\ActionColumn',
-                    'header' => 'จัดการ',
-                    'headerOptions' => ['class' => 'text-nowrap text-center','style' => 'width: 120px;'],
-                    'contentOptions' => ['class' => 'text-center'],
-                    'urlCreator' => function ($action, $model, $key, $index, $column) {
-                    return [$action, '_id' => (string)$model->_id];
-                    }
-                ],
+                    [
+                        'class' => 'yii\grid\SerialColumn',
+                        'header' => 'ลำดับ',
+                        'headerOptions' => ['class' => 'text-center', 'style' => 'width: 50px;'],
+                        'contentOptions' => ['class' => 'text-center'],
+
+                    ],
+                    [
+                        'attribute' => 'username',
+                        'headerOptions' => ['class' => 'text-center'],
+                        'contentOptions' => ['class' => 'text-center'],
+                    ],
+                    [
+                        'class' => 'yii\grid\ActionColumn',
+                        'header' => 'จัดการ',
+                        'headerOptions' => ['class' => 'text-nowrap text-center', 'style' => 'width: 120px;'],
+                        'contentOptions' => ['class' => 'text-center'],
+                        'urlCreator' => function ($action, $model, $key, $index, $column) {
+                            return [$action, '_id' => (string)$model->_id];
+                        }
+                    ],
                 ],
             ]); ?>
         </div>
-</div>
+    </div>

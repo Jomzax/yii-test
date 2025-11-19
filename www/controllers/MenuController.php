@@ -5,14 +5,15 @@ namespace app\controllers;
 use Yii;
 use app\helpers\AlertHelper;
 use app\helpers\ErrorHelper;
+use app\helpers\PermissionControlHelper;
 use app\models\Menu;
-use app\models\MenuPermissoin;
+use app\models\MenuPermission;
 use app\models\MenuRoles;
 use app\models\MenuSearch;
 use app\widgets\controller\BaseController;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
-use app\models\Permissoin;
+use app\models\permission;
 use MongoDB\BSON\ObjectId;
 
 /**
@@ -62,6 +63,12 @@ class MenuController extends BaseController
      */
     public function actionView($_id)
     {
+        $actionPermission = PermissionControlHelper::getActionPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_VIEW);
+        if (!$actionPermission['success']) {
+            AlertHelper::alert($actionPermission['type'], $actionPermission['text']);
+            return $this->redirect($actionPermission['redirect']);
+        }
+
         return $this->render('view', [
             'model' => $this->findModel($_id),
         ]);
@@ -74,14 +81,20 @@ class MenuController extends BaseController
      */
     public function actionCreate()
     {
+        $actionPermission = PermissionControlHelper::getActionPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_CREATE);
+        if (!$actionPermission['success']) {
+            AlertHelper::alert($actionPermission['type'], $actionPermission['text']);
+            return $this->redirect($actionPermission['redirect']);
+        }
+
         $model = new Menu();
 
         if ($this->request->isPost && $model->load($this->request->post())) {
             if ($model->save()) {
                 $menuId = (string)$model->_id;
 
-                // ✅ บันทึกลงคอลเลกชัน "permissoin" โดยเก็บ menu_id
-                $perm = new Permissoin();          // ❌ ห้ามใช้ yii\mongodb\rbac\Permission
+                // ✅ บันทึกลงคอลเลกชัน "permission" โดยเก็บ menu_id
+                $perm = new permission();          // ❌ ห้ามใช้ yii\mongodb\rbac\Permission
                 $perm->menu_id = $menuId;
                 // ใส่ค่าตัวเลือกอื่นได้ตามต้องการ
                 // $perm->name = $model->name;
@@ -112,11 +125,17 @@ class MenuController extends BaseController
 
     public function actionUpdate($_id)
     {
+        $actionPermission = PermissionControlHelper::getActionPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_UPDATE);
+        if (!$actionPermission['success']) {
+            AlertHelper::alert($actionPermission['type'], $actionPermission['text']);
+            return $this->redirect($actionPermission['redirect']);
+        }
+
         $model  = $this->findModel($_id);
         $menuId = (string)$model->_id;
 
-        // 1) ดึงสิทธิ์เดิมจาก collection "permissoin"
-        $permDocs = Permissoin::find()->where(['menu_id' => $menuId])->all();
+        // 1) ดึงสิทธิ์เดิมจาก collection "permission"
+        $permDocs = permission::find()->where(['menu_id' => $menuId])->all();
         $permissions = [];
         foreach ($permDocs as $doc) {
             $permissions[] = [
@@ -134,7 +153,7 @@ class MenuController extends BaseController
         if (Yii::$app->request->isPost) {
             $post = Yii::$app->request->post();
 
-            // เอาไว้ sync กับคอลเลกชัน permissoin
+            // เอาไว้ sync กับคอลเลกชัน permission
             $postPerms = $post['Menu']['permission_lists'] ?? [];
 
             // ตัด permission_lists ออกจากข้อมูลของ Menu เพื่อไม่ให้ถูก save ลง collection "menu"
@@ -143,7 +162,7 @@ class MenuController extends BaseController
             // 3) ค่อย load/save เฉพาะฟิลด์ของ Menu จริง ๆ
             if ($model->load($post) && $model->save()) {
 
-                // 4) จากนั้นจึง sync สิทธิ์ไปที่คอลเลกชัน "permissoin"
+                // 4) จากนั้นจึง sync สิทธิ์ไปที่คอลเลกชัน "permission"
                 $clean = [];
                 foreach ((array)$postPerms as $row) {
                     $v = trim($row['abbr'] ?? '');
@@ -155,9 +174,9 @@ class MenuController extends BaseController
                 // ลบสิทธิ์ที่ไม่อยู่แล้ว
                 $keepAbbs = array_map(fn($r) => $r['abbr'], $clean);
                 if (empty($keepAbbs)) {
-                    Permissoin::deleteAll(['menu_id' => $menuId]);
+                    permission::deleteAll(['menu_id' => $menuId]);
                 } else {
-                    Permissoin::deleteAll([
+                    permission::deleteAll([
                         'menu_id' => $menuId,
                         'abbr'    => ['$nin' => $keepAbbs],
                     ]);
@@ -165,9 +184,9 @@ class MenuController extends BaseController
 
                 // upsert
                 foreach ($clean as $r) {
-                    $doc = Permissoin::findOne(['menu_id' => $menuId, 'abbr' => $r['abbr']]);
+                    $doc = permission::findOne(['menu_id' => $menuId, 'abbr' => $r['abbr']]);
                     if ($doc === null) {
-                        $doc = new Permissoin();
+                        $doc = new permission();
                         $doc->menu_id = $menuId;
                         $doc->abbr    = $r['abbr'];
                     }
@@ -201,6 +220,12 @@ class MenuController extends BaseController
 
     public function actionDelete($_id)
     {
+        $actionPermission = PermissionControlHelper::getActionPermission(PermissionControlHelper::ACTION_PERMISSION_MENU_DELETE);
+        if (!$actionPermission['success']) {
+            AlertHelper::alert($actionPermission['type'], $actionPermission['text']);
+            return $this->redirect($actionPermission['redirect']);
+        }
+
         $model  = $this->findModel($_id);
         $menuId = (string)$model->_id;
 
@@ -210,8 +235,8 @@ class MenuController extends BaseController
             return $this->redirect(['index']);
         }
 
-        // 1) ลบ permissoin (ถ้ามีคอลเลกชัน Permissoin แยก)
-        Permissoin::deleteAll(['menu_id' => $menuId]);
+        // 1) ลบ permission (ถ้ามีคอลเลกชัน permission แยก)
+        permission::deleteAll(['menu_id' => $menuId]);
 
         // 2) หา menu_roles ของเมนูนี้ (เอาเฉพาะ _id ไม่ดึงทั้งเอกสาร)
         $menuRoleIds = MenuRoles::find()
@@ -220,10 +245,10 @@ class MenuController extends BaseController
             ->asArray()
             ->column(); // ได้เป็น array ของ ObjectId/str
 
-        // 3) ลบ menu_permissoin ใต้ menu_roles เหล่านี้แบบ $in
+        // 3) ลบ menu_permission ใต้ menu_roles เหล่านี้แบบ $in
         if (!empty($menuRoleIds)) {
             $menuRoleIdStr = array_map('strval', $menuRoleIds);
-            MenuPermissoin::deleteAll(['menuroles_id' => ['$in' => $menuRoleIdStr]]);
+            MenuPermission::deleteAll(['menuroles_id' => ['$in' => $menuRoleIdStr]]);
         }
 
         // 4) ลบ menu_roles ของเมนูนี้
@@ -234,7 +259,7 @@ class MenuController extends BaseController
     }
 
     /**
-     * หลังจากบันทึก Menu แล้ว ให้ไปอัปเดตชื่อในลูก MenuRoles และ MenuPermissoin ด้วย
+     * หลังจากบันทึก Menu แล้ว ให้ไปอัปเดตชื่อในลูก MenuRoles และ MenuPermission ด้วย
      */
     public function afterSave($insert, $changedAttributes)
     {
@@ -254,13 +279,13 @@ class MenuController extends BaseController
             // ถ้าเปลี่ยน abbr ให้เปลี่ยนที่ลูกด้วย
             if (array_key_exists('abbr', $changedAttributes)) {
                 $oldAbbr = (string)$changedAttributes['abbr'];
-                MenuPermissoin::updateAll(
+                MenuPermission::updateAll(
                     ['abbr' => (string)$this->abbr, 'name' => (string)$this->name],
                     ['menuroles_id' => ['$in' => $mrIds], 'abbr' => $oldAbbr]
                 );
             } else {
                 // ไม่ได้เปลี่ยน abbr แต่อัปเดตชื่อ
-                MenuPermissoin::updateAll(
+                MenuPermission::updateAll(
                     ['name' => (string)$this->name],
                     ['menuroles_id' => ['$in' => $mrIds], 'abbr' => (string)$this->abbr]
                 );

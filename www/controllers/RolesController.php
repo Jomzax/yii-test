@@ -9,15 +9,15 @@ use app\helpers\AlertHelper;
 use app\helpers\ErrorHelper;
 use app\helpers\RoleHelper;
 use app\models\Menu;
-use app\models\MenuPermissoin;
+use app\models\MenuPermission;
 use app\models\MenuRoles;
-use app\models\Permissoin;
-use yii\web\Controller;
+use app\models\permission;
+use app\widgets\controller\BaseController;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use MongoDB\BSON\ObjectId;
 
-class RolesController extends Controller
+class RolesController extends BaseController
 {
     public function behaviors()
     {
@@ -50,20 +50,23 @@ class RolesController extends Controller
         $model = new Roles();
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             Yii::$app->session->setFlash('success', 'บันทึกบทบาทสำเร็จ');
-            return $this->redirect(['view', 'id' => (string)$model->_id]);
+            return $this->redirect(['view', '_id' => (string)$model->_id]);
         }
         return $this->render('create', compact('model'));
     }
 
     public function actionUpdate($_id)
     {
+        /** @var \app\models\Roles $model */
         $model  = $this->findModel($_id);
         $roleId = (string)$model->_id;
 
         // ---------- ค่า checked เริ่มต้นให้ฟอร์ม ----------
+        /** @var \app\models\Menu[] $menus */
         $menus = \app\models\Menu::find()->all();
 
-        // เมนูที่ role นี้มีอยู่แล้ว -> map menu_id => menuroles_id
+        // เมนูที่ role นี้มีอยู่แล้ว -> map menu_id(string) => menuroles_id(string)
+        /** @var \app\models\MenuRoles[] $menuRoleRows */
         $menuRoleRows    = \app\models\MenuRoles::find()->where(['role_id' => $roleId])->all();
         $menuCheckedById = [];
 
@@ -71,37 +74,40 @@ class RolesController extends Controller
             $menuCheckedById[(string)$r->menu_id] = (string)$r->_id;
         }
 
+        // กวาดของค้าง: ตรวจสิทธิ์จริงบนแต่ละเมนู แล้วลบ menu_permission ที่อยู่นอกชุด valid
         foreach ($menuCheckedById as $menuId => $mrId) {
-            $validAbbrs = \app\models\Permissoin::find()
+            // สิทธิ์จริงที่ประกาศบนเมนูนั้นในคอลเลกชัน Permission
+            $validAbbrs = \app\models\Permission::find()
                 ->select(['abbr'])
                 ->where(['menu_id' => (string)$menuId])
                 ->asArray()->column();
 
-            // ถ้าเมนูนั้นไม่มีสิทธิ์เหลือเลย ก็ลบลูกทั้งหมด
+            // ถ้าเมนูนั้นไม่มีสิทธิ์เหลือเลย -> ลบลูกทั้งหมด
             if (empty($validAbbrs)) {
-                \app\models\MenuPermissoin::deleteAll(['menuroles_id' => (string)$mrId]);
+                \app\models\MenuPermission::deleteAll([
+                    'role_id'      => $roleId,
+                    'menuroles_id' => (string)$mrId
+                ]);
                 continue;
             }
 
             // ลบรายการค้างที่ abbr ไม่อยู่ในสิทธิ์จริงของเมนูนั้น
-            \app\models\MenuPermissoin::deleteAll([
+            \app\models\MenuPermission::deleteAll([
+                'role_id'      => $roleId,
                 'menuroles_id' => (string)$mrId,
                 'abbr'         => ['$nin' => array_values($validAbbrs)],
             ]);
         }
 
-        // จากนั้นค่อยโหลด $permCheckedAbbrs ตามเดิม
-        $permCheckedAbbrs = \app\models\MenuPermissoin::find()
-            ->select(['abbr'])
-            ->where(['menuroles_id' => ['$in' => array_values($menuCheckedById)]])
-            ->column();
-
-        // สิทธิ์ (abbr) ที่มีอยู่แล้วภายใต้ menuroles_ids ของ role นี้
+        // โหลดรายการ abbr ที่มีอยู่แล้ว เพื่อนำไปติ๊กในฟอร์ม
         $permCheckedAbbrs = [];
         if (!empty($menuCheckedById)) {
-            $permCheckedAbbrs = \app\models\MenuPermissoin::find()
+            $permCheckedAbbrs = \app\models\MenuPermission::find()
                 ->select(['abbr'])
-                ->where(['menuroles_id' => ['$in' => array_values($menuCheckedById)]])
+                ->where([
+                    'role_id'      => $roleId,
+                    'menuroles_id' => ['$in' => array_values($menuCheckedById)]
+                ])
                 ->column(); // ['org-master-create', ...]
         }
 
@@ -124,11 +130,11 @@ class RolesController extends Controller
 
             if ($model->load($post) && $model->save()) {
 
-                // Map เมนู: base(link) -> {id, link, name}
+                // Map เมนู: base(link) -> {_id, link, name}
                 $menuMap = [];
                 foreach ($menus as $m) {
                     $menuMap[$m->link] = [
-                        'id'   => (string)$m->_id,
+                        '_id'  => (string)$m->_id,
                         'link' => $m->link,
                         'name' => $m->name,
                     ];
@@ -140,37 +146,48 @@ class RolesController extends Controller
                     if (str_ends_with($p, '-menu')) {
                         $base = substr($p, 0, -5); // ตัด "-menu"
                         if (isset($menuMap[$base])) {
-                            $selectedMenuIds[] = $menuMap[$base]['id'];
+                            $selectedMenuIds[] = $menuMap[$base]['_id'];
                         }
                     }
                 }
                 $selectedMenuIds = array_values(array_unique($selectedMenuIds));
 
                 if (empty($selectedMenuIds)) {
-                    // ไม่เลือกเมนูเลย -> ลบ menu_roles ทั้งหมดของ role นี้ + ลูก menu_permissoin ทั้งหมด
+                    // ไม่เลือกเมนูเลย -> ลบ menu_roles ทั้งหมดของ role นี้ + ลูก menu_permission ทั้งหมด
                     \app\models\MenuRoles::deleteAll(['role_id' => $roleId]);
 
                     $orphans = array_values($menuCheckedById);
                     if ($orphans) {
-                        \app\models\MenuPermissoin::deleteAll(['menuroles_id' => ['$in' => $orphans]]);
+                        \app\models\MenuPermission::deleteAll([
+                            'role_id'      => $roleId,
+                            'menuroles_id' => ['$in' => $orphans]
+                        ]);
                     }
                     $menuCheckedById = [];
                 } else {
-                    // ลบเฉพาะ menu ที่เคยมีแต่ถูกยกเลิกติ๊ก (และลบลูก)
+                    // ลบเฉพาะเมนูที่เคยมีแต่ถูกยกเลิกติ๊ก (และลบลูก)
                     $toDeleteMenuIds = array_diff(array_keys($menuCheckedById), $selectedMenuIds);
                     if ($toDeleteMenuIds) {
-                        // เก็บ menuroles_id ของเมนูที่จะลบ เพื่อไปลบลูก
+                        // รวบรวม menuroles_id ของเมนูที่จะลบ เพื่อไปลบลูก
                         $delMenuRolesIds = [];
                         foreach ($toDeleteMenuIds as $mid) {
-                            if (isset($menuCheckedById[$mid])) $delMenuRolesIds[] = $menuCheckedById[$mid];
+                            if (isset($menuCheckedById[$mid])) {
+                                $delMenuRolesIds[] = $menuCheckedById[$mid];
+                            }
                         }
 
-                        // ลบลูกก่อน
+                        // ลบลูกก่อน (menu_permission)
                         if ($delMenuRolesIds) {
-                            \app\models\MenuPermissoin::deleteAll(['menuroles_id' => ['$in' => $delMenuRolesIds]]);
+                            \app\models\MenuPermission::deleteAll([
+                                'role_id'      => $roleId,
+                                'menuroles_id' => ['$in' => $delMenuRolesIds]
+                            ]);
                         }
                         // ลบ menu_roles
-                        \app\models\MenuRoles::deleteAll(['role_id' => $roleId, 'menu_id' => ['$in' => array_values($toDeleteMenuIds)]]);
+                        \app\models\MenuRoles::deleteAll([
+                            'role_id' => $roleId,
+                            'menu_id' => ['$in' => array_values($toDeleteMenuIds)]
+                        ]);
                     }
 
                     // upsert menu_roles สำหรับเมนูที่ถูกเลือก
@@ -187,14 +204,16 @@ class RolesController extends Controller
                     }
                 }
 
-                // ---------- 2) SYNC menu_permissoin (เฉพาะ fields: menuroles_id, name, abbr) ----------
+                // ---------- 2) SYNC menu_permission (fields: menuroles_id, role_id, name, abbr) ----------
                 $actions = ['create', 'update', 'delete', 'view'];
 
                 foreach ($menuMap as $base => $info) {
-                    $mid = $info['id'];
+                    $mid = $info['_id'];
 
                     // ถ้าเมนูนี้ไม่ได้ถูกเลือก -> ลูกถูกลบทิ้งแล้ว ข้าม
-                    if (!isset($menuCheckedById[$mid])) continue;
+                    if (!isset($menuCheckedById[$mid])) {
+                        continue;
+                    }
 
                     $menurolesId = $menuCheckedById[$mid];
 
@@ -202,17 +221,23 @@ class RolesController extends Controller
                     $abbrWanted = [];
                     foreach ($actions as $a) {
                         $abbr = "{$base}-{$a}";
-                        if (in_array($abbr, $postedPerms, true)) $abbrWanted[] = $abbr;
+                        if (in_array($abbr, $postedPerms, true)) {
+                            $abbrWanted[] = $abbr;
+                        }
                     }
 
                     // ไม่ติ๊ก action ใดๆ -> ลบลูกทั้งหมดของเมนูนี้ แล้วข้าม
                     if (empty($abbrWanted)) {
-                        \app\models\MenuPermissoin::deleteAll(['menuroles_id' => $menurolesId]);
+                        \app\models\MenuPermission::deleteAll([
+                            'role_id'      => $roleId,
+                            'menuroles_id' => $menurolesId
+                        ]);
                         continue;
                     }
 
-                    // ตรวจสิทธิ์จริงจากคอลเลกชัน Permissoin ของเมนูนี้ (กันกรณีมีการโพสต์ abbr แปลกๆ)
-                    $permDocs = \app\models\Permissoin::find()
+                    // ตรวจสิทธิ์จริงจากคอลเลกชัน Permission ของเมนูนี้ (กันการโพสต์ abbr แปลกๆ)
+                    /** @var \app\models\Permission[] $permDocs */
+                    $permDocs = \app\models\Permission::find()
                         ->where(['menu_id' => $mid, 'abbr' => ['$in' => $abbrWanted]])
                         ->all();
 
@@ -224,24 +249,30 @@ class RolesController extends Controller
 
                     if (empty($keepAbbrs)) {
                         // ไม่มีสิทธิ์ที่ตรงจริงเลย -> ลบลูกให้หมด
-                        \app\models\MenuPermissoin::deleteAll(['menuroles_id' => $menurolesId]);
+                        \app\models\MenuPermission::deleteAll([
+                            'role_id'      => $roleId,
+                            'menuroles_id' => $menurolesId
+                        ]);
                         continue;
                     } else {
                         // ลบอันที่ไม่ได้อยู่ในชุดที่จะคงไว้
-                        \app\models\MenuPermissoin::deleteAll([
+                        \app\models\MenuPermission::deleteAll([
+                            'role_id'      => $roleId,
                             'menuroles_id' => $menurolesId,
                             'abbr'         => ['$nin' => $keepAbbrs],
                         ]);
                     }
 
-                    // upsert menuroles_id, name, abbr
+                    // upsert menuroles_id, role_id, name, abbr
                     foreach ($keepByAbbr as $abbr => $name) {
-                        $mp = \app\models\MenuPermissoin::findOne([
+                        $mp = \app\models\MenuPermission::findOne([
+                            'role_id'      => $roleId,
                             'menuroles_id' => $menurolesId,
                             'abbr'         => $abbr,
                         ]);
                         if (!$mp) {
-                            $mp = new \app\models\MenuPermissoin();
+                            $mp = new \app\models\MenuPermission();
+                            $mp->role_id      = $roleId;
                             $mp->menuroles_id = $menurolesId;
                             $mp->abbr         = $abbr;
                         }
@@ -262,9 +293,9 @@ class RolesController extends Controller
 
 
 
-    public function actionDelete($id)
+    public function actionDelete($_id)
     {
-        $role = $this->findModel($id);
+        $role = $this->findModel($_id);
         $roleId = (string)$role->_id;
 
         // หา menu_roles ของ role นี้ (ดึงเฉพาะ _id)
@@ -276,7 +307,7 @@ class RolesController extends Controller
 
         if (!empty($menuRoleIds)) {
             $menuRoleIdStr = array_map('strval', $menuRoleIds);
-            MenuPermissoin::deleteAll(['menuroles_id' => ['$in' => $menuRoleIdStr]]);
+            MenuPermission::deleteAll(['menuroles_id' => ['$in' => $menuRoleIdStr]]);
             MenuRoles::deleteAll(['_id' => ['$in' => $menuRoleIds]]);
         }
 

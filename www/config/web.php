@@ -76,7 +76,6 @@ $config = [
         'login' => 'site/login',
         'logout' => 'site/logout',
         'signup' => 'site/signup',
-        'about' => 'site/about',
         'contact' => 'site/contact',
         '/unit/create/<parentId>' => 'unit/create',
         'file/download/<filename>' => 'file/download',

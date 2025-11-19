@@ -7,6 +7,7 @@ use app\helpers\AccessControlHelper;
 use app\helpers\AlertHelper;
 use app\models\User;
 use app\models\UserSearch;
+use app\widgets\controller\BaseController;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -14,7 +15,7 @@ use yii\filters\VerbFilter;
 /**
  * UserController implements the CRUD actions for User model.
  */
-class UserController extends Controller
+class UserController extends BaseController
 {
     /**
      * @inheritDoc
@@ -73,6 +74,16 @@ class UserController extends Controller
     {
         $model = new User();
 
+        // ✅ ค้นหา role เริ่มต้นจาก collection Roles (เช่น type = 'user')
+        $defaultRole = \app\models\Roles::findOne(['type' => 'user']);
+        if ($defaultRole) {
+            // เก็บเป็น string ของ ObjectId เพื่อให้ MongoDB เก็บได้ง่าย
+            $model->roles_id = (string)$defaultRole->_id;
+        } else {
+            Yii::$app->session->setFlash('error', 'ไม่พบ role เริ่มต้น (user)');
+            return $this->redirect(['index']);
+        }
+
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             Yii::$app->session->setFlash('success', 'สมัครสมาชิกสำเร็จแล้ว!');
             return $this->redirect(['index']);
@@ -86,6 +97,7 @@ class UserController extends Controller
             'model' => $model,
         ]);
     }
+
 
 
     /**
