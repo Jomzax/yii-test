@@ -27,7 +27,7 @@ use app\models\Roles;
 
         <div class="col-md-6">
             <?= $form->field($model, 'roles')->dropDownList(Roles::getRolesList(), [
-                'prompt' => 'เลือกประเภท',
+                'prompt' => 'เลือกประเภท=',
                 'class' => 'form-select form-control',
                 'style' => 'width: 100%;'
             ]) ?>
