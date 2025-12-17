@@ -51,7 +51,7 @@ $config = [
 
     'mongodb' => [
       'class' => '\yii\mongodb\Connection',
-      'dsn' => 'mongodb://admin:P%40ssw0rd@10.243.91.72:27017/?authSource=admin',
+      'dsn' => '',
       'defaultDatabaseName' => 'db',
     ],
 
@@ -113,3 +113,4 @@ if (YII_ENV_DEV) {
 }
 
 return $config;
+
